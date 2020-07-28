@@ -18,13 +18,24 @@ object Main {
         classOf[FileNotFoundException],
         classOf[ClassCastException])
 
-    def doSomething(e: IllegalArgumentException) = true
+    def doSomething(e: Throwable) = true
 
     def isARetryableException(throwable: Throwable): Boolean = {
       throwable match {
         case e: IllegalArgumentException =>
           println("Match")
           doSomething(e)
+
+        case e: FileNotFoundException =>
+          println("Match")
+          doSomething(e)
+
+        case cause: Throwable =>
+          println(
+            s"An unknown cause exception: $cause is thrown. " +
+              s"Will not be retrying.",
+            cause)
+          false
       }
     }
 
@@ -42,7 +53,7 @@ object Main {
     def test(): Unit = {
       if (i % 2 != 0) {
         j += 1
-        throw new IllegalArgumentException()
+        throw new FileNotFoundException()
       }
     }
 

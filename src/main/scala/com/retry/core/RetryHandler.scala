@@ -11,7 +11,7 @@ class RetryHandler(policy: RetryPolicy) {
 
 
   private def shouldRetry(): Boolean = {
-    this.policy.maxAttempts < retryAttempt
+    retryAttempt < this.policy.maxAttempts
   }
 
   private def isAllowedEx(exception: Throwable): Boolean = {
@@ -23,6 +23,8 @@ class RetryHandler(policy: RetryPolicy) {
   }
 
   def getDelay: Long = delay
+
+  def inc(): Unit = (retryAttempt = retryAttempt + 1)
 
 
   private def computeDelayBeforeNextRetry(attempt: Int, policy: RetryPolicy): Long = {
@@ -42,19 +44,17 @@ class RetryHandler(policy: RetryPolicy) {
         return f
       } catch {
         case NonFatal(exception: Throwable) =>
-          if (policy.allowException(exception.getClass)) {
+          if (shouldRetry() && isAllowedEx(exception)) {
             val context = RetryPolicyContext(retryAttempt + 1, exception)
+            policy.onFailure(context)
+            policy.exceptionProcessor(exception)
 
-            if (shouldRetry() && isAllowedEx(exception)) {
-              policy.onFailure(context)
-              policy.exceptionProcessor(exception)
-            }
 
             if (policy.printStackTraceForThrowables)
               printStackTrace(exception)
 
             policy.onRetry(context)
-            retryAttempt = retryAttempt + 1
+            inc()
             println(s"wait $getDelay ms for next retry, retried $retryAttempt attempt(s).")
             Thread.sleep(computeDelayBeforeNextRetry(retryAttempt, policy))
           } else {
