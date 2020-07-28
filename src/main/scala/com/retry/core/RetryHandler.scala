@@ -9,22 +9,17 @@ class RetryHandler(policy: RetryPolicy) {
   private var retryAttempt: Int = 0
   private var delay: Long = 0
 
-
-  private def shouldRetry(): Boolean = {
-    retryAttempt < this.policy.maxAttempts
-  }
-
-  private def isAllowedEx(exception: Throwable): Boolean = {
-    this.policy.allowException(exception.getClass)
-  }
-
-  def setDelay(delay: Long): Unit = {
-    this.delay = delay
-  }
+  def setDelay(delay: Long): Unit = this.delay = delay
 
   def getDelay: Long = delay
 
-  def inc(): Unit = (retryAttempt = retryAttempt + 1)
+  private def shouldRetry: Boolean =
+    retryAttempt < this.policy.maxAttempts
+
+  private def isAllowedEx(exception: Throwable): Boolean =
+    this.policy.allowException(exception.getClass)
+
+  def incrementAttempts(): Unit = (retryAttempt = retryAttempt + 1)
 
 
   private def computeDelayBeforeNextRetry(attempt: Int, policy: RetryPolicy): Long = {
@@ -33,9 +28,8 @@ class RetryHandler(policy: RetryPolicy) {
     nextDelay
   }
 
-  private def jitter(maxMills: Long): Long = {
+  private def jitter(maxMills: Long): Long =
     if (maxMills == 0) 0 else (ThreadLocalRandom.current().nextDouble() * maxMills).toLong
-  }
 
   def retry[T](f: => T): T = {
     val result = null.asInstanceOf[T]
@@ -44,7 +38,7 @@ class RetryHandler(policy: RetryPolicy) {
         return f
       } catch {
         case NonFatal(exception: Throwable) =>
-          if (shouldRetry() && isAllowedEx(exception)) {
+          if (shouldRetry && isAllowedEx(exception)) {
             val context = RetryPolicyContext(retryAttempt + 1, exception)
             policy.onFailure(context)
             policy.exceptionProcessor(exception)
@@ -54,7 +48,7 @@ class RetryHandler(policy: RetryPolicy) {
               printStackTrace(exception)
 
             policy.onRetry(context)
-            inc()
+            incrementAttempts()
             println(s"wait $getDelay ms for next retry, retried $retryAttempt attempt(s).")
             Thread.sleep(computeDelayBeforeNextRetry(retryAttempt, policy))
           } else {
