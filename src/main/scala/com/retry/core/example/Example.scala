@@ -1,11 +1,13 @@
-package com.retry.core
+package com.retry.core.example
 
 import java.io.FileNotFoundException
+
+import com.retry.core.{FixedDelayBackOffStrategy, RetryHandler, RetryPolicy}
 
 import scala.concurrent.duration._
 
 
-object Main {
+object Example {
 
   def main(args: Array[String]): Unit = {
 
@@ -39,12 +41,11 @@ object Main {
       }
     }
 
-    val policy = RetryPolicy("Immediately", 10, 2.second,
+    val policy = RetryPolicy("Immediately", 5, 2.second,
       retryStrategy = FixedDelayBackOffStrategy,
       allowException = AllowedExceptions,
       printStackTraceForThrowables = true,
       exceptionProcessor = isARetryableException)
-
 
 
     val i: Int = 3
@@ -53,17 +54,9 @@ object Main {
     def test(): Unit = {
       if (i % 2 != 0) {
         j += 1
-        throw new FileNotFoundException()
+        throw new ClassNotFoundException()
       }
     }
-
-    //    val result: String = RetryHandler().withPolicy(policy).retry {
-    //      if (i % 2 != 0) {
-    //        j += 1
-    //        throw new Exception()
-    //      }
-    //      "Hello World"
-    //    }
 
     val handler = new RetryHandler(policy)
     handler.retry(test())

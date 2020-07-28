@@ -4,10 +4,7 @@ import java.io.{ByteArrayOutputStream, PrintWriter}
 import java.util.concurrent.ThreadLocalRandom
 
 import scala.util.control.NonFatal
-/**
- *
- * @param policy: [[RetryPolicy]]
- */
+
 class RetryHandler(policy: RetryPolicy) {
   private var retryAttempt: Int = 0
   private var delay: Long = 0
@@ -22,8 +19,7 @@ class RetryHandler(policy: RetryPolicy) {
   private def isAllowedEx(exception: Throwable): Boolean =
     this.policy.allowException(exception.getClass)
 
-  def incrementAttempts(): Unit =
-    synchronized(retryAttempt = retryAttempt + 1)
+  def incrementAttempts(): Unit = (retryAttempt = retryAttempt + 1)
 
 
   private def computeDelayBeforeNextRetry(attempt: Int, policy: RetryPolicy): Long = {
@@ -38,11 +34,11 @@ class RetryHandler(policy: RetryPolicy) {
     if (maxMills == 0) 0 else (ThreadLocalRandom.current().nextDouble() * maxMills).toLong
 
 
-  def retry[T](task: () => T): T = {
+  def retry[T](task: => T): T = {
     val result = null.asInstanceOf[T]
     while (true) {
       try {
-        return task()
+        return task
       } catch {
         case NonFatal(exception: Throwable) =>
           if (shouldRetry && isAllowedEx(exception)) {
